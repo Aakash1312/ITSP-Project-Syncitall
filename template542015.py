@@ -556,14 +556,14 @@ class FinalList:
 		self.finallist={}
 	def update(self):
 		gdrivefile.authorize()
-		#odrivefile.authorize()
+		odrivefile.authorize()
 		dropboxfile.authorize()
 		gdrivefile.updatefilelist()
-		#odrivefile.updatefilelist()
+		odrivefile.updatefilelist()
 		add='/'
 		dropboxfile.makefilelist(add,self.finallist)
 		folder=[]
-		#odrivefile.makefinallist(self.finallist,odrivefile.filelist,folder)
+		odrivefile.makefinallist(self.finallist,odrivefile.filelist,folder)
 		gdrivefile.makefinallist(self.finallist,gdrivefile.filelist)
 	def printaddress(self):
 		for a,b in self.finallist.items():
@@ -994,17 +994,6 @@ for x,y in File.finallist.items():
 		makebrowser(y.address,folderpagelist,w)
 	except:
 		print("error in this address"+ y.address)
-'''
-makebrowser("/home/dir/Pictures/final1.png",folderpagelist,w)
-makebrowser("/home/dir/DC/final.png",folderpagelist,w)
-makebrowser("/home/dir/DC/final.png",folderpagelist,w)
-makebrowser("/home/dir/machaya/final2.png",folderpagelist,w)
-makebrowser("/home/dir/DC++dsafsdaasdfsagfdgdgsd/final3.png",folderpagelist,w)
-makebrowser("/home/dir/DC++/yisfskl1.png",folderpagelist,w)
-makebrowser("/home/dir/DC2++/yisfskl2.png",folderpagelist,w)
-makebrowser("/home/dir/DC3++/yisfskl3.png",folderpagelist,w)
-makebrowser("/home/dir/yisfskl.png",folderpagelist,w)
-'''
 #stray list is to ensure that workfile.pkl is present to load.
 stray_list={'address':None}
 
