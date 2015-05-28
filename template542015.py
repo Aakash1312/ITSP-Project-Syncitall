@@ -30,9 +30,11 @@ import Tkinter
 import tkFileDialog
 # main() function gets file directory through dialog box. 
 #libraries for gui
+import pickle
 import sys
 from PyQt4.QtGui import  *
 from PyQt4.QtCore import *
+saved_list={}
 '''
 def main1():
 	adda=QString()
@@ -554,14 +556,14 @@ class FinalList:
 		self.finallist={}
 	def update(self):
 		gdrivefile.authorize()
-		odrivefile.authorize()
+		#odrivefile.authorize()
 		dropboxfile.authorize()
 		gdrivefile.updatefilelist()
-		odrivefile.updatefilelist()
+		#odrivefile.updatefilelist()
 		add='/'
 		dropboxfile.makefilelist(add,self.finallist)
 		folder=[]
-		odrivefile.makefinallist(self.finallist,odrivefile.filelist,folder)
+		#odrivefile.makefinallist(self.finallist,odrivefile.filelist,folder)
 		gdrivefile.makefinallist(self.finallist,gdrivefile.filelist)
 	def printaddress(self):
 		for a,b in self.finallist.items():
@@ -572,6 +574,33 @@ class FinalList:
 '''--------------------CODE FOR GUI STARTS HERE---------------------------'''					
 main=None
 abc=QApplication(sys.argv)
+
+
+#This code is to get any new icons or directories created in cloud storage.
+	
+def process_list():
+	for a,b in folderpagelist.items():
+		for c in b.iconlist:
+			if b.windowtitle+c.name not in saved_list.keys():
+				saved_list.update({b.windowtitle+c.name:None})
+	pickle.dump(saved_list,open('workfile.pkl','wb'))
+#This function is to change the folderpagelist according to data saved 
+#in saved_list.	
+def process_folderpagelist():
+	print saved_list
+	for a,b in saved_list.items():
+		if b!=None:
+			i=a.rfind("/")
+			srcname=a[i+1:]
+			srcdirname=a[:i+1]
+			j=b.rfind("/")
+			dstdirname=b[:j+1]
+			if srcdirname in folderpagelist.keys():			
+				for k in folderpagelist[srcdirname].iconlist:
+					if k.name==srcname:
+						folderpagelist[dstdirname].iconlist.append(k)
+						folderpagelist[srcdirname].iconlist.remove(k)
+	
 
 class page(QWidget):
 	def __init__(self,add):
@@ -600,10 +629,12 @@ class page(QWidget):
 	def paste(self):
  		if main.movelist != []:
 				self.iconlist=main.movelist+self.iconlist
+				for a in main.movelist:
+					saved_list.update({a.ad+a.name:self.address+a.name})
 			#main.update(folderpagelist,self.address)
 				yo(folderpagelist,self.address)#modifies the page..
 				del main.movelist[:] 
-		 
+		pickle.dump(saved_list,open('workfile.pkl','wb'))
 
 	
 
@@ -795,7 +826,6 @@ class Main(QMainWindow):
 			super(Main, self).__init__(parent)
 			self.centralWidget=QWidget()
 			self.setCentralWidget(self.centralWidget)
-
 			self.mainLayout=QGridLayout()
 			self.container=QWidget()
 			self.scroll=QScrollArea()
@@ -958,11 +988,34 @@ File.update()
 
 folderpagelist={}
 folderpagelist.update({"/Home/":w})
+
 for x,y in File.finallist.items():
 	try:
 		makebrowser(y.address,folderpagelist,w)
 	except:
 		print("error in this address"+ y.address)
+'''
+makebrowser("/home/dir/Pictures/final1.png",folderpagelist,w)
+makebrowser("/home/dir/DC/final.png",folderpagelist,w)
+makebrowser("/home/dir/DC/final.png",folderpagelist,w)
+makebrowser("/home/dir/machaya/final2.png",folderpagelist,w)
+makebrowser("/home/dir/DC++dsafsdaasdfsagfdgdgsd/final3.png",folderpagelist,w)
+makebrowser("/home/dir/DC++/yisfskl1.png",folderpagelist,w)
+makebrowser("/home/dir/DC2++/yisfskl2.png",folderpagelist,w)
+makebrowser("/home/dir/DC3++/yisfskl3.png",folderpagelist,w)
+makebrowser("/home/dir/yisfskl.png",folderpagelist,w)
+'''
+#stray list is to ensure that workfile.pkl is present to load.
+stray_list={'address':None}
+
+#saved list is where all cut-paste data will remain persistent.
+try:
+	saved_list=pickle.load(open('workfile.pkl','rb'))
+except:
+	pickle.dump(stray_list,open('workfile.pkl','wb'))
+	saved_list=pickle.load(open('workfile.pkl','rb'))	
+process_list()
+process_folderpagelist()
 main=Main(folderpagelist,"/Home/")
 main.update(folderpagelist,"/Home/")
 main.show()
