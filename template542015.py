@@ -30,9 +30,11 @@ import Tkinter
 import tkFileDialog
 # main() function gets file directory through dialog box. 
 #libraries for gui
+import pickle
 import sys
 from PyQt4.QtGui import  *
 from PyQt4.QtCore import *
+saved_list={}
 '''
 def main1():
 	adda=QString()
@@ -420,6 +422,7 @@ class odrivefile(file):
 			print(filetype)
 			#print('PROBLEM HERE')			
 			if filetype=='folder' or filetype=='album':
+				foldername=''
 				folderlist.append(name+'/')
 				for x in folderlist:
 					foldername=foldername+x
@@ -528,7 +531,7 @@ class dropboxfile(file):
 			return None
 		else:
 			print ("shared : " +str(dropboxfile.account['quota_info']['shared']))
-			print ("quota : " +str(dropboxfile.account['quota_info']['quota']))
+			print ("quota  : " +str(dropboxfile.account['quota_info']['quota']))
 			print ("normal : " +str(dropboxfile.account['quota_info']['normal']))	
 	
 	@staticmethod
@@ -573,6 +576,48 @@ class FinalList:
 main=None
 abc=QApplication(sys.argv)
 
+
+#This code is to get any new icons or directories created in cloud storage.
+	
+def process_list():
+	for a,b in folderpagelist.items():
+		for c in b.iconlist:
+			if b.windowtitle+c.name not in saved_list.keys():
+				saved_list.update({b.windowtitle+c.name:None})
+	pickle.dump(saved_list,open('workfile.pkl','wb'))
+#This function is to change the folderpagelist according to data saved 
+#in saved_list.	
+def process_folderpagelist():
+	#Make all new folders
+	for i in saved_list.keys():
+		if i[-1]=="/":
+			tmppage=page(i)
+			folderpagelist.update({i:tmppage})
+	#Assign icons to new folders.
+	for i in saved_list.keys():
+		if i[-1]=="/":
+			j=i[:-2].rfind("/")
+			name=i[j+1:-1]
+			rname=i[:j]+"/"
+			if rname in folderpagelist.keys():
+				icon=foldericon(folderpagelist[rname],name)
+				folderpagelist[rname].iconlist.append(icon)
+
+	#Take care of moved icons.
+	for a,b in saved_list.items():
+		if b!=None:
+			i=a.rfind("/")
+			srcname=a[i+1:]
+			srcdirname=a[:i+1]
+			j=b.rfind("/")
+			dstdirname=b[:j+1]
+			if srcdirname in folderpagelist.keys():			
+				for k in folderpagelist[srcdirname].iconlist:
+					if k.name==srcname:
+						folderpagelist[dstdirname].iconlist.append(k)
+						folderpagelist[srcdirname].iconlist.remove(k)
+	
+
 class page(QWidget):
 	def __init__(self,add):
 		super(page,self).__init__()
@@ -600,10 +645,12 @@ class page(QWidget):
 	def paste(self):
  		if main.movelist != []:
 				self.iconlist=main.movelist+self.iconlist
+				for a in main.movelist:
+					saved_list.update({a.ad+a.name:self.address+a.name})
 			#main.update(folderpagelist,self.address)
 				yo(folderpagelist,self.address)#modifies the page..
 				del main.movelist[:] 
-		 
+		pickle.dump(saved_list,open('workfile.pkl','wb'))
 
 	
 
@@ -644,9 +691,10 @@ class icon(QLabel):
 		self.new_label.returnPressed.connect(self.new_fol)
 		#txtlabel.setFixedSize(130,10)
 		#txtlabel.setStyleSheet("QWidget {background-color:blue}")
+		nname=name
 		if len(name)>15:
-			name=name[:11]+"..."
-		self.txtlabel.setText(name)
+			nname=name[:11]+"..."
+		self.txtlabel.setText(nname)
 		self.txtlabel.setFixedSize(130,20)
 		self.txtlabel.setAlignment(Qt.AlignCenter)
 		self.setAlignment(Qt.AlignCenter)
@@ -656,6 +704,8 @@ class icon(QLabel):
 		self.name=str(txt)
 		self.txtlabel.setText(self.name)
 		new_page=page(self.page.windowtitle+self.name+"/")
+		saved_list.update({self.page.windowtitle+self.name+"/":None})
+		pickle.dump(saved_list,open('workfile.pkl','wb'))
 		folderpagelist.update({self.page.windowtitle+self.name+"/":new_page})
 		yo(folderpagelist,self.page.windowtitle)
 		
@@ -795,7 +845,6 @@ class Main(QMainWindow):
 			super(Main, self).__init__(parent)
 			self.centralWidget=QWidget()
 			self.setCentralWidget(self.centralWidget)
-
 			self.mainLayout=QGridLayout()
 			self.container=QWidget()
 			self.scroll=QScrollArea()
@@ -958,11 +1007,24 @@ File.update()
 
 folderpagelist={}
 folderpagelist.update({"/Home/":w})
+
 for x,y in File.finallist.items():
 	try:
 		makebrowser(y.address,folderpagelist,w)
 	except:
 		print("error in this address"+ y.address)
+
+#stray list is to ensure that workfile.pkl is present to load.
+stray_list={'address':None}
+
+#saved list is where all cut-paste data will remain persistent.
+try:
+	saved_list=pickle.load(open('workfile.pkl','rb'))
+except:
+	pickle.dump(stray_list,open('workfile.pkl','wb'))
+	saved_list=pickle.load(open('workfile.pkl','rb'))	
+process_list()
+process_folderpagelist()
 main=Main(folderpagelist,"/Home/")
 main.update(folderpagelist,"/Home/")
 main.show()
