@@ -5,6 +5,7 @@ import time
 import os
 import shutil
 import ntpath
+from pyvirtualdisplay import Display
 #import urllib2
 #libraries for gdrive file operations
 from apiclient.discovery import build
@@ -30,9 +31,11 @@ import Tkinter
 import tkFileDialog
 # main() function gets file directory through dialog box. 
 #libraries for gui
+import pickle
 import sys
 from PyQt4.QtGui import  *
 from PyQt4.QtCore import *
+saved_list={}
 '''
 def main1():
 	adda=QString()
@@ -44,7 +47,13 @@ def main2():
 	addb=QFileDialog.getOpenFileName()
 	return addb	
 '''
-
+class account:
+	gname=''
+	gpass=''
+	oname=''
+	opass=''
+	dname=''
+	dpass=''
 class file:#bas class file
 	authorized=False#whether authorization has taken place or not
 	listupdated=False#whether file list is updated or not
@@ -60,6 +69,7 @@ class file:#bas class file
 		pass
 
 class gdrivefile(file):
+	tobeauthorized=False
 	drive_service=None
 	filelist=[]
 	currentquota=None
@@ -103,22 +113,17 @@ class gdrivefile(file):
 		#print 'Go to the following link in your browser: ' + authorize_url
 
 		try:		
-			driver=webdriver.Firefox()#depends on your browser
-						
+			driver=webdriver.PhantomJS()#depends on your browser
 			driver.get(authorize_url)
-			cookies=driver.get_cookies()
-			for cookie in cookies:
-				driver.add_cookie(cookie)			
-			#login=driver.find_element_by_name("signIn")
-			#login.send_keys(Keys.RETURN)
-			accept= WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.ID, "submit_approve_access")))
-			accept.send_keys(Keys.RETURN)
-				#accept.click()
-			a=driver.find_element_by_id("code")
-				
-			code=a.get_attribute('value')		
+			WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.ID, "Email"))).send_keys(account.gname)
+			WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.ID, "Passwd"))).send_keys(account.gpass)	
+			WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.ID, "signIn"))).click()		
+			WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.ID, "submit_approve_access"))).click()
+			code1= WebDriverWait(driver, 120).until(EC.element_to_be_clickable((By.ID, "code")))
+			code=code1.get_attribute('value')		
 			driver.quit()
 			gdrivefile.authorized=True
+			print "Google drive authorized"
 		except:
 			print "Could not authorize to Google Drive"
 			return None
@@ -224,6 +229,7 @@ class gdrivefile(file):
   			
 
 class odrivefile(file):
+	tobeauthorized=False
 	filelist=None
 	currentquota=None
 	downloadfilepath='/home/utkarsh/Downloads/Syncitall Onedrive Downloads'
@@ -276,15 +282,19 @@ class odrivefile(file):
 		try:
 
 			oscope='onedrive.readwrite'#scope=how do u want to get access(PROBLEM HERE)=REQUESTED SCOPE DOES'NT MATCHES GIVEN SCOPE
-			driver=webdriver.Firefox()
+			driver=webdriver.PhantomJS()
 			authurl= 'https://login.live.com/oauth20_authorize.srf?scope='+oscope+'&redirect_uri=https%3A%2F%2Flogin.live.com%2Foauth20_desktop.srf&response_type=code&client_id=000000004015642C'
 			driver.get(authurl)
-			accept= WebDriverWait(driver, 120).until(EC.element_to_be_clickable((By.ID, "idBtn_Accept")))
-			accept.send_keys(Keys.RETURN)
+			WebDriverWait(driver, 120).until(EC.element_to_be_clickable((By.ID, "i0116"))).send_keys(account.oname)
+			WebDriverWait(driver, 120).until(EC.element_to_be_clickable((By.ID, "i0118"))).send_keys(account.opass)
+			WebDriverWait(driver, 120).until(EC.element_to_be_clickable((By.ID, "idSIButton9"))).click()
+
+			WebDriverWait(driver, 120).until(EC.element_to_be_clickable((By.ID, "idBtn_Accept"))).click()
 			endurl=str(driver.current_url)
 			driver.quit()
 			os.system("onedrive-cli auth "+ endurl)
 			odrivefile.authorized=True
+			print "Onedrive authorized"
 		except:
 			print("Could'nt authorize onedrive")
 			return None	
@@ -420,6 +430,7 @@ class odrivefile(file):
 			print(filetype)
 			#print('PROBLEM HERE')			
 			if filetype=='folder' or filetype=='album':
+				foldername=''
 				folderlist.append(name+'/')
 				for x in folderlist:
 					foldername=foldername+x
@@ -450,6 +461,7 @@ class odrivefile(file):
 
 		
 class dropboxfile(file):
+	tobeauthorized=False
 	client=None
 	account=None
 	def upload(self):
@@ -470,19 +482,20 @@ class dropboxfile(file):
 		flow = dropbox.client.DropboxOAuth2FlowNoRedirect(app_key, app_secret)
 		authorize_url = flow.start()
 		try:
-			driver=webdriver.Firefox()#depends on your browser
-			
+			driver=webdriver.PhantomJS()#depends on your browser
 			driver.get(authorize_url)
-			#login=driver.find_element_by_name("signIn")
-			#login.send_keys(Keys.RETURN)
-			accept= WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.NAME, "allow_access")))
-			accept.send_keys(Keys.RETURN)
-				#accept.click()
-			code=driver.find_element_by_id("auth-code").get_attribute("innerHTML")
-				
-				
+			driver.save_screenshot('screen1.png')
+			(WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.XPATH, '//input[@class="text-input-input autofocus"]')))).send_keys(account.dname)
+			(WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.XPATH, '//input[@class="password-input text-input-input"]')))).send_keys(account.dpass)
+			driver.save_screenshot('screen2.png')
+			(WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.XPATH, '//button[@type="submit"]')))).click()
+			(WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.NAME, "allow_access")))).click()
+			driver.save_screenshot('screen5.png')
+			code1= WebDriverWait(driver, 120).until(EC.element_to_be_clickable((By.ID, "auth-code")))
+			code=code1.get_attribute("innerHTML")
 			driver.quit()
 			dropboxfile.authorized=True
+			print "Dropbox authorized"
 		except:
 			print "Could not authorize to dropbox"
 			return None
@@ -528,7 +541,7 @@ class dropboxfile(file):
 			return None
 		else:
 			print ("shared : " +str(dropboxfile.account['quota_info']['shared']))
-			print ("quota : " +str(dropboxfile.account['quota_info']['quota']))
+			print ("quota  : " +str(dropboxfile.account['quota_info']['quota']))
 			print ("normal : " +str(dropboxfile.account['quota_info']['normal']))	
 	
 	@staticmethod
@@ -553,16 +566,28 @@ class FinalList:
 	def __init__(self):
 		self.finallist={}
 	def update(self):
-		gdrivefile.authorize()
-		odrivefile.authorize()
-		dropboxfile.authorize()
-		gdrivefile.updatefilelist()
-		odrivefile.updatefilelist()
-		add='/'
-		dropboxfile.makefilelist(add,self.finallist)
-		folder=[]
-		odrivefile.makefinallist(self.finallist,odrivefile.filelist,folder)
-		gdrivefile.makefinallist(self.finallist,gdrivefile.filelist)
+		if gdrivefile.tobeauthorized==True:
+			if True:
+				gdrivefile.authorize()
+				gdrivefile.updatefilelist()
+				gdrivefile.makefinallist(self.finallist,gdrivefile.filelist)
+			else:
+				print "Could not make filelist"
+		if dropboxfile.tobeauthorized==True:
+			try:
+				dropboxfile.authorize()
+				add='/'
+				dropboxfile.makefilelist(add,self.finallist)
+			except:
+				print "Could not make filelist"
+		if odrivefile.tobeauthorized==True:
+			try:
+				odrivefile.authorize()
+				odrivefile.updatefilelist()
+				folder=[]
+				odrivefile.makefinallist(self.finallist,odrivefile.filelist,folder)
+			except:
+				print "Could not make filelist"
 	def printaddress(self):
 		for a,b in self.finallist.items():
 			print(a,str(b.address))#change here
@@ -572,6 +597,48 @@ class FinalList:
 '''--------------------CODE FOR GUI STARTS HERE---------------------------'''					
 main=None
 abc=QApplication(sys.argv)
+
+
+#This code is to get any new icons or directories created in cloud storage.
+	
+def process_list():
+	for a,b in folderpagelist.items():
+		for c in b.iconlist:
+			if b.windowtitle+c.name not in saved_list.keys():
+				saved_list.update({b.windowtitle+c.name:None})
+	pickle.dump(saved_list,open('workfile.pkl','wb'))
+#This function is to change the folderpagelist according to data saved 
+#in saved_list.	
+def process_folderpagelist():
+	#Make all new folders
+	for i in saved_list.keys():
+		if i[-1]=="/":
+			tmppage=page(i)
+			folderpagelist.update({i:tmppage})
+	#Assign icons to new folders.
+	for i in saved_list.keys():
+		if i[-1]=="/":
+			j=i[:-2].rfind("/")
+			name=i[j+1:-1]
+			rname=i[:j]+"/"
+			if rname in folderpagelist.keys():
+				icon=foldericon(folderpagelist[rname],name)
+				folderpagelist[rname].iconlist.append(icon)
+
+	#Take care of moved icons.
+	for a,b in saved_list.items():
+		if b!=None:
+			i=a.rfind("/")
+			srcname=a[i+1:]
+			srcdirname=a[:i+1]
+			j=b.rfind("/")
+			dstdirname=b[:j+1]
+			if srcdirname in folderpagelist.keys():			
+				for k in folderpagelist[srcdirname].iconlist:
+					if k.name==srcname:
+						folderpagelist[dstdirname].iconlist.append(k)
+						folderpagelist[srcdirname].iconlist.remove(k)
+	
 
 class page(QWidget):
 	def __init__(self,add):
@@ -600,10 +667,12 @@ class page(QWidget):
 	def paste(self):
  		if main.movelist != []:
 				self.iconlist=main.movelist+self.iconlist
+				for a in main.movelist:
+					saved_list.update({a.ad+a.name:self.address+a.name})
 			#main.update(folderpagelist,self.address)
 				yo(folderpagelist,self.address)#modifies the page..
 				del main.movelist[:] 
-		 
+		pickle.dump(saved_list,open('workfile.pkl','wb'))
 
 	
 
@@ -644,9 +713,10 @@ class icon(QLabel):
 		self.new_label.returnPressed.connect(self.new_fol)
 		#txtlabel.setFixedSize(130,10)
 		#txtlabel.setStyleSheet("QWidget {background-color:blue}")
+		nname=name
 		if len(name)>15:
-			name=name[:11]+"..."
-		self.txtlabel.setText(name)
+			nname=name[:11]+"..."
+		self.txtlabel.setText(nname)
 		self.txtlabel.setFixedSize(130,20)
 		self.txtlabel.setAlignment(Qt.AlignCenter)
 		self.setAlignment(Qt.AlignCenter)
@@ -656,6 +726,8 @@ class icon(QLabel):
 		self.name=str(txt)
 		self.txtlabel.setText(self.name)
 		new_page=page(self.page.windowtitle+self.name+"/")
+		saved_list.update({self.page.windowtitle+self.name+"/":None})
+		pickle.dump(saved_list,open('workfile.pkl','wb'))
 		folderpagelist.update({self.page.windowtitle+self.name+"/":new_page})
 		yo(folderpagelist,self.page.windowtitle)
 		
@@ -795,7 +867,6 @@ class Main(QMainWindow):
 			super(Main, self).__init__(parent)
 			self.centralWidget=QWidget()
 			self.setCentralWidget(self.centralWidget)
-
 			self.mainLayout=QGridLayout()
 			self.container=QWidget()
 			self.scroll=QScrollArea()
@@ -935,38 +1006,199 @@ class Main(QMainWindow):
 		#cut.triggered.connect(lambda x:folderpagelist[main.curradd].cut(self))#change here
 		paste.triggered.connect(lambda x:folderpagelist[main.curradd].paste())
 		self.menu.popup(QCursor.pos())
-
-
-						  
-  
-#class fileicon()
-#add=main2()
-#a=odrivefile(add)
-#a.upload()
+File=FinalList()
+show_token=False
+main2=None
+status=None
 w=page("/Home/")
 #imgadd='/home/trueutkarsh/Pictures/downloadfolderfinal.png'
 
 
 folderpagelist={}
 folderpagelist.update({"/Home/":w})
+folderpagelist={}
+folderpagelist.update({"/Home/":w})
 
 
-File=FinalList()
-File.update()
+#stray list is to ensure that workfile.pkl is present to load.
+stray_list={'address':None}
+#saved list is where all cut-paste data will remain persistent.
+try:
+	saved_list=pickle.load(open('workfile.pkl','rb'))
+except:
+	pickle.dump(stray_list,open('workfile.pkl','wb'))
+	saved_list=pickle.load(open('workfile.pkl','rb'))	
+
+class Welcome(QMainWindow):
+	def __init__(self,parent=None):
+		super(Welcome, self).__init__(parent)
+		self.centralwidget=QWidget()
+		self.centralwidget.setFixedSize(250,300)
+		self.layout=QVBoxLayout()
+		Question=QLabel()
+		Question.setText("What do you want to sync?")
+		self.layout.addWidget(Question)
+		gcb=QCheckBox('Google Drive')
+		self.layout.addWidget(gcb)
+		gh=QHBoxLayout()
+		gh.addStretch(1)
+		gv=QVBoxLayout()
+		gu=QHBoxLayout()
+		gp=QHBoxLayout()
+		usrname=QLabel()
+		usrname.setFixedSize(70,10)
+		usrname.setText("Username")
+		passw=QLabel()
+		passw.setFixedSize(70,10)
+		passw.setText("Password")
+		self.ul=QLineEdit()
+		self.ul.setEnabled(False)
+		self.pl=QLineEdit()
+		self.pl.setEnabled(False)
+		gu.addWidget(usrname)
+		gu.addWidget(self.ul)
+		gp.addWidget(passw)
+		gp.addWidget(self.pl)
+		gv.addItem(gu)
+		gv.addItem(gp)
+		gh.addItem(gv)
+		gh.addStretch(40)
+		self.layout.addItem(gh)
+		gcb.stateChanged.connect(self.gfunc)
+		dcb=QCheckBox('Dropbox')
+		self.layout.addWidget(dcb)		
+		dh=QHBoxLayout()
+		dh.addStretch(1)
+		dv=QVBoxLayout()
+		du=QHBoxLayout()
+		dp=QHBoxLayout()
+		usrname=QLabel()
+		usrname.setFixedSize(70,10)
+		usrname.setText("Username")
+		passw=QLabel()
+		passw.setFixedSize(70,10)
+		passw.setText("Password")
+		self.dul=QLineEdit()
+		self.dul.setEnabled(False)
+		self.dpl=QLineEdit()
+		self.dpl.setEnabled(False)
+		du.addWidget(usrname)
+		du.addWidget(self.dul)
+		dp.addWidget(passw)
+		dp.addWidget(self.dpl)
+		dv.addItem(du)
+		dv.addItem(dp)
+		dh.addItem(dv)
+		dh.addStretch(40)
+		self.layout.addItem(dh)
+		dcb.stateChanged.connect(self.dfunc)
+		ocb=QCheckBox('Onedrive')
+		self.layout.addWidget(ocb)		
+		oh=QHBoxLayout()
+		oh.addStretch(1)
+		ov=QVBoxLayout()
+		ou=QHBoxLayout()
+		op=QHBoxLayout()
+		usrname=QLabel()
+		usrname.setFixedSize(70,10)
+		usrname.setText("Username")
+		passw=QLabel()
+		passw.setFixedSize(70,10)
+		passw.setText("Password")
+		self.oul=QLineEdit()
+		self.oul.setEnabled(False)
+		self.opl=QLineEdit()
+		self.opl.setEnabled(False)
+		ou.addWidget(usrname)
+		ou.addWidget(self.oul)
+		op.addWidget(passw)
+		op.addWidget(self.opl)
+		ov.addItem(ou)
+		ov.addItem(op)
+		oh.addItem(ov)
+		oh.addStretch(40)
+		self.layout.addItem(oh)
+		ocb.stateChanged.connect(self.ofunc)
+		self.button=QPushButton()
+		self.button.setText("Done")
+		self.button.clicked.connect(self.insert)
+		self.layout.addWidget(self.button)
+		self.centralwidget.setLayout(self.layout)
+		self.setCentralWidget(self.centralwidget)
+	def insert(self):
+		account.gname=str(self.ul.text()).strip()
+		account.gpass=str(self.pl.text()).strip()
+		account.dname=str(self.dul.text()).strip()
+		account.dpass=str(self.dpl.text()).strip()
+		account.oname=str(self.oul.text()).strip()
+		account.opass=str(self.opl.text()).strip()
+		if account.gname!='':
+			gdrivefile.tobeauthorized=True
+		if account.oname!='':
+			odrivefile.tobeauthorized=True
+		if account.dname!='':
+			dropboxfile.tobeauthorized=True
+		File.update()
+		if dropboxfile.authorized==True or gdrivefile.authorized==True or odrivefile.authorized==True:
+			self.hide()
+			for x,y in File.finallist.items():
+				try:
+					makebrowser(y.address,folderpagelist,w)
+				except:
+					print("error in this address"+ y.address)
+			process_list()
+			process_folderpagelist()
+			global main
+			main.update(folderpagelist,"/Home/")
+
+			main.show()
+
+
+	def gfunc(self,state):
+		if state==Qt.Checked:
+			self.ul.setEnabled(True)
+			self.pl.setEnabled(True)
+		else:
+			self.ul.setEnabled(False)
+			self.pl.setEnabled(False)
+			self.ul.setText('')
+			self.pl.setText('')			
+	def dfunc(self,state):
+		if state==Qt.Checked:
+			self.dul.setEnabled(True)
+			self.dpl.setEnabled(True)
+		else:
+			self.dul.setEnabled(False)
+			self.dpl.setEnabled(False)
+			self.dul.setText('')
+			self.dpl.setText('')	
+	def ofunc(self,state):
+		if state==Qt.Checked:
+			self.oul.setEnabled(True)
+			self.opl.setEnabled(True)
+		else:
+			self.oul.setEnabled(False)
+			self.opl.setEnabled(False)
+			self.oul.setText('')
+			self.opl.setText('')				  
+ 
+#class fileicon()
+#add=main2()
+#a=odrivefile(add)
+#a.upload()
+global main
+main2=Welcome()
+main=Main(folderpagelist,"/Home/")
+main2.show()
+status=abc.exec_()
 #File.printaddress()#-TO PRINT FINAL LIST  UNCOMMENT THIS LINE
 
 
-folderpagelist={}
-folderpagelist.update({"/Home/":w})
-for x,y in File.finallist.items():
-	try:
-		makebrowser(y.address,folderpagelist,w)
-	except:
-		print("error in this address"+ y.address)
-main=Main(folderpagelist,"/Home/")
-main.update(folderpagelist,"/Home/")
-main.show()
-sys.exit(abc.exec_())
+
+
+
+
+
 
 
 
