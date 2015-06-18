@@ -193,7 +193,7 @@ class gdrivefile(file):
 		#print 'Go to the following link in your browser: ' + authorize_url
 
 		try:		
-			driver=webdriver.Firefox()#change here
+			driver=webdriver.PhantomJS()#change here
 			driver.get(authorize_url)
 			cookies=driver.get_cookies()
 			for cookie in cookies:
@@ -209,6 +209,7 @@ class gdrivefile(file):
 			#code=a.get_attribute('value')	
 			'''	
 			WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.ID, "Email"))).send_keys(account.gname)
+			WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.ID, "next"))).click()
 			WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.ID, "Passwd"))).send_keys(account.gpass)	
 			WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.ID, "signIn"))).click()		
 			WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.ID, "submit_approve_access"))).click()
@@ -399,7 +400,7 @@ class odrivefile(file):
 		#code for authorization
 		'''
 		client_id='000000004015642C'
-		driver=webdriver.Firefox()
+		driver=webdriver.PhantomJS()
 		client_secret='w2A-Ass34UsVdS16PqibDAOmgTdddlTZ'
 		
 		oredirecturi= 'https://login.live.com/oauth20_desktop.srf'
@@ -409,7 +410,7 @@ class odrivefile(file):
 		try:
 
 			oscope='onedrive.readwrite'#scope=how do u want to get access(PROBLEM HERE)=REQUESTED SCOPE DOES'NT MATCHES GIVEN SCOPE
-			driver=webdriver.Firefox()# change herer
+			driver=webdriver.PhantomJS()# change herer
 			authurl= 'https://login.live.com/oauth20_authorize.srf?scope='+oscope+'&redirect_uri=https%3A%2F%2Flogin.live.com%2Foauth20_desktop.srf&response_type=code&client_id=000000004015642C'
 			driver.get(authurl)
 			WebDriverWait(driver, 120).until(EC.element_to_be_clickable((By.ID, "i0116"))).send_keys(account.oname)
@@ -650,7 +651,7 @@ class dropboxfile(file):
 			print "No internet connection"
 			return
 		try:
-			driver=webdriver.Firefox()#depends on your browser
+			driver=webdriver.PhantomJS()#depends on your browser
 			driver.get(authorize_url)
 
 			driver.save_screenshot('screen1.png')
